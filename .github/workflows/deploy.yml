@@ -23,7 +23,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15" dist/ $SSH_USER@$SSH_HOST:/var/www/suizhou/releases/live/
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15" --delete dist/ $SSH_USER@$SSH_HOST:/var/www/suizhou/releases/live/
           rsync -avz -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15" dist/assets/ $SSH_USER@$SSH_HOST:/var/www/suizhou/assets/
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15" server/link_service.py $SSH_USER@$SSH_HOST:/var/www/suizhou/service/link_service.py
-          ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "sudo ln -sfn /var/www/suizhou/releases/live /var/www/suizhou/current && (sudo service suizhou_links restart 2>/dev/null || (sudo pkill -f link_service.py; sleep 1; sudo service suizhou_links start)) || true"
+          ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "sudo ln -sfn /var/www/suizhou/releases/live /var/www/suizhou/current"

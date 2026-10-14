@@ -15,11 +15,5 @@ export default defineConfig({
 		sourcemap: false,
 		assetsInlineLimit: 0,
 		license: { fileName: "assets/third-party.txt" },
-		rollupOptions: {
-			input: {
-				main: "index.html",
-				share: "share.html",
-			},
-		},
 	},
 });

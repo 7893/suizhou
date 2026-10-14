@@ -63,19 +63,6 @@
 	padding: 9px 5px;
 	opacity: 0.55;
 }
-.share-portal-link {
-	color: inherit;
-	text-decoration: none;
-	font: inherit;
-	font-size: 13px;
-	letter-spacing: 0.2em;
-	padding: 9px 5px;
-	opacity: 0.55;
-	transition: opacity 0.3s;
-}
-.share-portal-link:hover {
-	opacity: 1;
-}
 .scene-nav button[aria-pressed="true"] {
 	opacity: 1;
 	border-bottom-color: currentColor;
