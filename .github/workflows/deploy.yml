@@ -7,13 +7,15 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          ASSET_BASE_URL: ${{ secrets.ASSET_BASE_URL }}
       - name: Deploy to SGA Server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_KEY }}
@@ -23,6 +25,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15" --delete dist/ $SSH_USER@$SSH_HOST:/var/www/suizhou/releases/live/
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15" --delete --exclude='pyq*.jpg' dist/ $SSH_USER@$SSH_HOST:/var/www/suizhou/releases/live/
           rsync -avz -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15" dist/assets/ $SSH_USER@$SSH_HOST:/var/www/suizhou/assets/
           ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "sudo ln -sfn /var/www/suizhou/releases/live /var/www/suizhou/current"
