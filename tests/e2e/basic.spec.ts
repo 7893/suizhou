@@ -4,6 +4,17 @@ test("renders production bundle and switches scenes cleanly", async ({
 	page,
 }) => {
 	const issues: string[] = [];
+	await page.route("http://localhost:4173/", async (route) => {
+		const response = await route.fetch();
+		await route.fulfill({
+			response,
+			headers: {
+				...response.headers(),
+				"content-security-policy":
+					"default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+			},
+		});
+	});
 	page.on("pageerror", (error) => issues.push(`pageerror: ${error.message}`));
 	page.on("requestfailed", (req) =>
 		issues.push(`requestfailed: ${req.url()} ${req.failure()?.errorText}`),

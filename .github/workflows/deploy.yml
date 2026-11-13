@@ -30,6 +30,9 @@ jobs:
       - run: npm run build
         env:
           ASSET_BASE_URL: ${{ secrets.ASSET_BASE_URL }}
+      - name: Pre-compress static assets
+        run: |
+          find dist -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.txt' \) -exec gzip -9 -k -f {} +
       - name: Deploy to SGA Server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_KEY }}

@@ -1,4 +1,5 @@
 import { Ticker, WebGLRenderer } from "pixi.js";
+import "pixi.js/unsafe-eval";
 import { createBoat } from "../actors/boat.ts";
 import { createEnvironment } from "../environment/state.ts";
 import { getDefinition } from "../scenes/registry.ts";
