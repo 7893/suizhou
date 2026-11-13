@@ -1,11 +1,11 @@
-import type { MeshGeometry, RenderTexture, WebGLRenderer } from "pixi.js";
+import type { Geometry, RenderTexture, WebGLRenderer } from "pixi.js";
 import type { JourneyState } from "../scenes/types.ts";
 import { createPass } from "./pass.ts";
 import { fragment } from "./shaders/transition.ts";
 
 export function createCompositor(
 	textures: RenderTexture[],
-	geometry: MeshGeometry,
+	geometry: Geometry,
 ) {
 	const pass = createPass(
 		fragment,

@@ -1,10 +1,10 @@
 import type {
-	MeshGeometry,
+	Geometry,
 	TextureSource,
 	UniformData,
 	WebGLRenderer,
 } from "pixi.js";
-import { CanvasSource } from "pixi.js";
+import { CanvasSource, Texture } from "pixi.js";
 import type { SceneActor } from "../scenes/registry.ts";
 import { getDefinition } from "../scenes/registry.ts";
 import type { Scene, SceneName } from "../scenes/types.ts";
@@ -33,16 +33,20 @@ function shared(): Record<string, UniformData> {
 	};
 }
 
-export function createResources(geometry: MeshGeometry, boat: TextureSource) {
+export function createResources(geometry: Geometry, boat: TextureSource) {
 	const passes = new Map<SceneName, Pass>();
-	const textures = new Map<SceneName, CanvasSource[]>();
+	const textures = new Map<SceneName, Record<string, CanvasSource>>();
 	const actors = new Map<SceneName, SceneActor>();
 	let painting: Scene;
 
 	function clear() {
-		textures.forEach((sources) =>
-			sources.forEach((source) => source.destroy()),
-		);
+		textures.forEach((sources, name) => {
+			const pass = passes.get(name);
+			for (const [key, source] of Object.entries(sources)) {
+				if (pass) pass.shader.resources[key] = Texture.EMPTY.source;
+				source.destroy();
+			}
+		});
 		textures.clear();
 	}
 
@@ -63,12 +67,13 @@ export function createResources(geometry: MeshGeometry, boat: TextureSource) {
 		if (sceneActor)
 			sources[sceneActor.resourceName] = sceneActor.texture.source;
 
-		const owned: CanvasSource[] = [];
+		const owned: Record<string, CanvasSource> = {};
 		try {
 			for (const [key, canvas] of Object.entries(painting.get(name).layers)) {
 				const source = texture(canvas, definition.nearest?.includes(key));
-				sources[`u_${key}`] = source;
-				owned.push(source);
+				const uniformKey = `u_${key}`;
+				sources[uniformKey] = source;
+				owned[uniformKey] = source;
 			}
 			let pass = passes.get(name);
 			if (!pass) {
@@ -88,7 +93,7 @@ export function createResources(geometry: MeshGeometry, boat: TextureSource) {
 			textures.set(name, owned);
 			return pass;
 		} catch (error) {
-			owned.forEach((source) => source.destroy());
+			Object.values(owned).forEach((source) => source.destroy());
 			throw error;
 		}
 	}
@@ -108,11 +113,11 @@ export function createResources(geometry: MeshGeometry, boat: TextureSource) {
 		prepare,
 		drawActor,
 		dispose() {
+			passes.forEach((pass) => pass.dispose());
+			passes.clear();
 			clear();
 			actors.forEach((actor) => actor.dispose());
 			actors.clear();
-			passes.forEach((pass) => pass.dispose());
-			passes.clear();
 		},
 		get preparedScenes() {
 			return [...textures.keys()];

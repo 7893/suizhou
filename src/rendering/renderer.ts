@@ -13,7 +13,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
 		alpha: false,
 		antialias: false,
 		depth: false,
-		stencil: false,
+		stencil: true,
 		powerPreference: "low-power",
 	});
 	if (!gl) return null;
@@ -143,8 +143,8 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
 		},
 		dispose() {
 			resources.dispose();
-			actor.dispose();
 			compositor.dispose();
+			actor.dispose();
 			targets.dispose();
 			geometry.destroy();
 			renderer.destroy(false);

@@ -3,8 +3,16 @@ import { expect, test } from "@playwright/test";
 test("renders production bundle and switches scenes cleanly", async ({
 	page,
 }) => {
-	const errors: string[] = [];
-	page.on("pageerror", (error) => errors.push(error.message));
+	const issues: string[] = [];
+	page.on("pageerror", (error) => issues.push(`pageerror: ${error.message}`));
+	page.on("requestfailed", (req) =>
+		issues.push(`requestfailed: ${req.url()} ${req.failure()?.errorText}`),
+	);
+	page.on("console", (msg) => {
+		if (msg.text().includes("GPU stall due to ReadPixels")) return;
+		if (msg.type() === "warning" || msg.type() === "error")
+			issues.push(`${msg.type()}: ${msg.text()}`);
+	});
 	await page.goto("/");
 	await expect(page).toHaveTitle(/随舟/i);
 	const canvas = page.locator("canvas#landscape");
@@ -16,7 +24,9 @@ test("renders production bundle and switches scenes cleanly", async ({
 		await btn.click();
 		await expect(btn).toHaveAttribute("aria-pressed", "true");
 	}
-	expect(errors).toEqual([]);
+	await page.setViewportSize({ width: 1024, height: 700 });
+	await page.waitForTimeout(250);
+	expect(issues).toEqual([]);
 });
 
 test("static Canvas 2D fallback matches viewport and resizes cleanly", async ({
