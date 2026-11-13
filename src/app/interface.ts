@@ -15,7 +15,7 @@ function setLines(element: HTMLElement, lines: string[]) {
 
 const cache = new WeakMap<
 	HTMLCanvasElement,
-	{ scene: SceneName | ""; inscription: HTMLElement }
+	{ scene: SceneName | ""; target: SceneName | ""; inscription: HTMLElement }
 >();
 
 export function updateSceneUI(
@@ -28,7 +28,7 @@ export function updateSceneUI(
 		canvas.dataset.transition = transition;
 	let entry = cache.get(canvas);
 	if (!entry?.inscription.isConnected) {
-		entry = { scene: "", inscription: element(".inscription") };
+		entry = { scene: "", target: "", inscription: element(".inscription") };
 		cache.set(canvas, entry);
 	}
 	const opacity = state.transitioning
@@ -36,6 +36,14 @@ export function updateSceneUI(
 		: "1";
 	if (entry.inscription.style.opacity !== opacity)
 		entry.inscription.style.opacity = opacity;
+	if (entry.target !== state.to) {
+		entry.target = state.to;
+		for (const button of sceneButtons)
+			button.setAttribute(
+				"aria-pressed",
+				String(button.dataset.scene === state.to),
+			);
+	}
 	if (entry.scene === state.scene) return;
 	canvas.dataset.scene = state.scene;
 	entry.scene = state.scene;
@@ -46,9 +54,4 @@ export function updateSceneUI(
 	setLines(element(".seal"), info.seal);
 	element(".work-mark").textContent = info.mark;
 	canvas.setAttribute("aria-label", info.description);
-	for (const button of sceneButtons)
-		button.setAttribute(
-			"aria-pressed",
-			String(button.dataset.scene === state.scene),
-		);
 }

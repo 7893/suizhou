@@ -29,5 +29,8 @@ test("invalid inputs are ignored, extremes bounded, presets recover gradually", 
 	assert(state.atmosphere[2] >= 0 && state.atmosphere[2] < 0.001);
 	environment.reset("coast");
 	assert(environment.sample("coast", 101, wind).atmosphere[2] > 0);
+	environment.breathe("ink", 32);
+	const breathing = environment.sample("ink", 40, wind);
+	assert(breathing.atmosphere.every((v) => Number.isFinite(v) && v >= 0));
 	assert.throws(() => environment.setTarget("unknown", {}), /Unknown/);
 });

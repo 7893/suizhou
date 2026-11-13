@@ -1,14 +1,16 @@
 import { canvasLayer, seededRandom } from "../../drawing/canvas.ts";
-import { palms } from "./composition.ts";
+import { palmsByFormat } from "./composition.ts";
 import { drawCoastDetails } from "./details.ts";
 import { drawIslands } from "./islands.ts";
 import { paintLounger } from "./leisure.ts";
 import { paintPalm } from "./palms.ts";
 import { beachPath } from "./shore.ts";
+
 // A warm island cove: foreground palms and sand, with all water drawn on GPU.
 export function createCoast(width: number, height: number) {
-	const W = 1200,
-		H = (W * height) / width;
+	const portrait = width / height < 0.85;
+	const W = portrait ? 780 : 1200;
+	const H = (W * height) / width;
 	const base = canvasLayer(width, height, W),
 		canvas = base.canvas;
 	const ctx = base.ctx;
@@ -35,11 +37,13 @@ export function createCoast(width: number, height: number) {
 		);
 	}
 	ctx.restore();
-	drawIslands(ctx, W, H, random);
-	drawCoastDetails(ctx, W, H, random, material.ctx);
+	drawIslands(ctx, W, H, random, portrait);
+	drawCoastDetails(ctx, W, H, random, material.ctx, portrait);
 	paintLounger(ctx, W, H);
 	const palmLayers = [];
-	for (const { root, crown } of palms)
+	for (const { root, crown } of palmsByFormat[
+		portrait ? "portrait" : "landscape"
+	])
 		for (const foliage of [false, true]) {
 			const layer = canvasLayer(width, height, W);
 			paintPalm(
@@ -64,5 +68,6 @@ export function createCoast(width: number, height: number) {
 		},
 		width,
 		height,
+		portrait,
 	};
 }

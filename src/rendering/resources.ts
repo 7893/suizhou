@@ -1,6 +1,12 @@
-import type { MeshGeometry, TextureSource, UniformData } from "pixi.js";
+import type {
+	MeshGeometry,
+	TextureSource,
+	UniformData,
+	WebGLRenderer,
+} from "pixi.js";
 import { CanvasSource } from "pixi.js";
-import { definitions } from "../scenes/registry.ts";
+import type { SceneActor } from "../scenes/registry.ts";
+import { getDefinition } from "../scenes/registry.ts";
 import type { Scene, SceneName } from "../scenes/types.ts";
 import type { Pass } from "./pass.ts";
 import { createPass } from "./pass.ts";
@@ -13,6 +19,7 @@ function texture(canvas: HTMLCanvasElement, nearest = false) {
 		autoGenerateMipmaps: false,
 	});
 }
+
 function shared(): Record<string, UniformData> {
 	return {
 		u_size: { value: [0, 0], type: "vec2<f32>" },
@@ -25,29 +32,37 @@ function shared(): Record<string, UniformData> {
 		u_actorScale: { value: [0, 0], type: "vec2<f32>" },
 	};
 }
-export function createResources(
-	geometry: MeshGeometry,
-	boat: TextureSource,
-	beach: TextureSource,
-) {
+
+export function createResources(geometry: MeshGeometry, boat: TextureSource) {
 	const passes = new Map<SceneName, Pass>();
 	const textures = new Map<SceneName, CanvasSource[]>();
+	const actors = new Map<SceneName, SceneActor>();
 	let painting: Scene;
+
 	function clear() {
 		textures.forEach((sources) =>
 			sources.forEach((source) => source.destroy()),
 		);
 		textures.clear();
 	}
+
 	function upload(next: Scene) {
 		clear();
 		painting = next;
 	}
+
 	function prepare(name: SceneName) {
 		if (textures.has(name)) return passes.get(name)!;
-		const definition = definitions[name];
+		const definition = getDefinition(name);
 		const sources: Record<string, TextureSource> = { u_boatLayer: boat };
-		if (name === "coast") sources.u_beachCrew = beach;
+		let sceneActor = actors.get(name);
+		if (!sceneActor && definition.createActor) {
+			sceneActor = definition.createActor();
+			actors.set(name, sceneActor);
+		}
+		if (sceneActor)
+			sources[sceneActor.resourceName] = sceneActor.texture.source;
+
 		const owned: CanvasSource[] = [];
 		try {
 			for (const [key, canvas] of Object.entries(painting.get(name).layers)) {
@@ -77,11 +92,25 @@ export function createResources(
 			throw error;
 		}
 	}
+
+	function drawActor(
+		name: SceneName,
+		renderer: WebGLRenderer,
+		time: number,
+		width: number,
+		height: number,
+	) {
+		actors.get(name)?.draw(renderer, time, width, height);
+	}
+
 	return {
 		upload,
 		prepare,
+		drawActor,
 		dispose() {
 			clear();
+			actors.forEach((actor) => actor.dispose());
+			actors.clear();
 			passes.forEach((pass) => pass.dispose());
 			passes.clear();
 		},

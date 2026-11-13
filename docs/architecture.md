@@ -68,10 +68,11 @@ palm occlusion; the surface owns destruction of all child display objects.
 ## Rendering contract
 
 Each scene provides a deterministic Canvas painting, a GLSL fragment program,
-and a complete static fallback. Shared actor geometry and water interactions
-remain common. Scenes prepare lazily, reuse compiled programs across resize,
+and a complete static fallback, loaded on demand via dynamic scene definitions.
+Shared boat geometry and water interactions remain common, while Spine coastal
+actors load only with the coast chunk. Scenes prepare lazily, reuse compiled programs across resize,
 and release obsolete textures and targets. The courtyard and interior are excluded from the
-public cycle and idle preparation. The courtyard navigation and sun entrance are
+public cycle, initial bundle, and idle preparation. The courtyard navigation and sun entrance are
 hidden; retained interior controls and rendering remain available in source.
 
 City, coast, and garden render directly to the screen during normal playback. Ink keeps

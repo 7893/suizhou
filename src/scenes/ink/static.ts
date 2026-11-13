@@ -1,20 +1,23 @@
 import { FISH_COUNT, fishState } from "../../motion/fish.ts";
 import type { Painting } from "../types.ts";
+import { inkLayout } from "./composition.ts";
+
 export function drawStaticInk(
 	ctx: CanvasRenderingContext2D,
 	scene: Painting,
 	boatLayer: HTMLCanvasElement,
 ) {
 	const { layers, width, height } = scene;
+	const sun = scene.portrait ? inkLayout.sun.portrait : inkLayout.sun.landscape;
 	ctx.clearRect(0, 0, width, height);
 	ctx.drawImage(layers.paper, 0, 0);
 	ctx.save();
 	ctx.fillStyle = "rgba(163,92,59,.19)";
 	ctx.beginPath();
 	ctx.arc(
-		width * (scene.portrait ? 0.32 : 0.72),
-		height * (scene.portrait ? 0.12 : 0.205),
-		Math.min(width, height) * 0.039,
+		width * sun[0],
+		height * sun[1],
+		Math.min(width, height) * inkLayout.sun.radius,
 		0,
 		Math.PI * 2,
 	);
@@ -25,11 +28,11 @@ export function drawStaticInk(
 		ctx.drawImage(layers[name], 0, 0);
 	ctx.save();
 	ctx.beginPath();
-	ctx.rect(0, height * 0.735, width, height * 0.215);
+	ctx.rect(0, height * (inkLayout.waterline + 0.005), width, height * 0.215);
 	ctx.clip();
-	ctx.translate(0, height * 0.73);
-	ctx.scale(1, -0.5);
-	ctx.translate(0, -height * 0.73);
+	ctx.translate(0, height * inkLayout.waterline);
+	ctx.scale(1, inkLayout.staticReflectionScale);
+	ctx.translate(0, -height * inkLayout.waterline);
 	ctx.globalAlpha = 0.18;
 	for (const name of ["far", "middle", "near"])
 		ctx.drawImage(layers[name], 0, 0);

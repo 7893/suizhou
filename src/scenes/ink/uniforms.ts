@@ -26,5 +26,6 @@ export function updateFishUniforms(
 		time,
 		uniforms.u_fish as Float32Array,
 		uniforms.u_fishRipples as Float32Array,
+		uniforms.u_touch as ArrayLike<number> | undefined,
 	);
 }

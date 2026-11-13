@@ -1,11 +1,46 @@
 import { glow, stroke } from "../../drawing/canvas.ts";
+import { cityLayout } from "./composition.ts";
 import { drawRiverTerrace } from "./terrace.ts";
+
+function drawNearBankLanterns(
+	k: CanvasRenderingContext2D,
+	W: number,
+	H: number,
+	portrait: boolean,
+) {
+	const xs = cityLayout.nearLamps[portrait ? "portrait" : "landscape"];
+	// Subtle stone coping along the right near bank ("两岸灯相照").
+	stroke(
+		k,
+		[
+			[W * 0.71, H * 0.996],
+			[W * 0.83, H * 0.958],
+			[W, H * 0.902],
+		],
+		"rgba(96,112,108,.28)",
+		1.4,
+	);
+	xs.forEach((nx, idx) => {
+		const t = (nx - 0.69) / 0.31;
+		const x = W * nx;
+		const y = H * (0.992 - t * 0.088);
+		const postH = Math.max(8, H * (0.016 - idx * 0.001));
+		// Soft amber pool on the stone path and bollard post.
+		glow(k, x, y - postH * 0.7, 16, "rgba(246,194,112,.20)");
+		k.fillStyle = "#192d31";
+		k.fillRect(x - 1.6, y - postH, 3.2, postH + 2);
+		k.fillStyle = "rgba(250,214,148,.88)";
+		k.fillRect(x - 1.4, y - postH + 1.2, 2.8, 2.4);
+	});
+}
+
 export function drawRiver({
 	b,
 	l,
 	k,
 	W,
 	H,
+	portrait,
 	random,
 	tree,
 }: {
@@ -14,6 +49,7 @@ export function drawRiver({
 	k: CanvasRenderingContext2D;
 	W: number;
 	H: number;
+	portrait: boolean;
 	random: () => number;
 	tree: ReturnType<typeof import("./trees.ts").createTrees>;
 }) {
@@ -74,11 +110,24 @@ export function drawRiver({
 			);
 		}
 	}
-	// A single shallow illuminated footbridge, recessed behind the boat's route.
+	// Sculpted stone piers and warm arch-vault lighting beneath the illuminated footbridge.
 	const left = W * 0.42,
 		right = W * 0.92,
 		deck = H * 0.608,
 		arch = H * 0.031;
+	for (const pierT of [0.02, 0.28, 0.72, 0.98]) {
+		const px = left + (right - left) * pierT;
+		const py = deck - 2 * arch * pierT * (1 - pierT) + 7;
+		const pw = Math.max(5, W * 0.0075);
+		b.fillStyle = "#122429";
+		b.fillRect(px - pw * 0.5, py, pw, H * 0.641 - py);
+		glow(l, px, H * 0.634, 14, "rgba(244,190,108,.22)");
+	}
+	for (const vaultT of [0.15, 0.5, 0.85]) {
+		const vx = left + (right - left) * vaultT;
+		const vy = deck - 2 * arch * vaultT * (1 - vaultT) + 9;
+		glow(l, vx, vy + 3, 22, "rgba(248,196,116,.19)");
+	}
 	b.beginPath();
 	b.moveTo(left, deck + 8);
 	b.quadraticCurveTo((left + right) / 2, deck - arch, right, deck + 8);
@@ -133,11 +182,13 @@ export function drawRiver({
 	k.lineTo(W, H);
 	k.closePath();
 	k.fill();
+	drawNearBankLanterns(k, W, H, portrait);
 	for (let i = 0; i < 4; i++) {
 		const x = W * (-0.035 + i * 0.033),
 			y = H * (0.91 + i * 0.015);
 		tree(k, x, y, H * (0.21 + random() * 0.045), true);
 	}
+	tree(k, W * 1.015, H * 0.915, H * 0.19, true);
 	// Scattered grass blades and textured stones at the viewer's feet.
 	for (let i = 0; i < 500; i++) {
 		const x = random() * W,

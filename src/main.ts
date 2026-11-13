@@ -10,6 +10,7 @@ import { createJourney, scenes } from "./motion/journey.ts";
 import { createWind } from "./motion/wind.ts";
 import { createRenderer } from "./rendering/renderer.ts";
 import { createScene } from "./scenes/index.ts";
+import { isSceneLoaded, loadDefinition } from "./scenes/registry.ts";
 import type { Scene, SceneName } from "./scenes/types.ts";
 import { hitWater } from "./scenes/water-hit.ts";
 
@@ -22,26 +23,51 @@ for (const control of sceneButtons)
 	control.hidden = !scenes.includes(control.dataset.scene);
 updateSceneUI(canvas, journey.state(), sceneButtons);
 
-let renderer = await createRenderer(canvas).catch((error: unknown) => {
+let [renderer] = await Promise.all([
+	createRenderer(canvas).catch((error: unknown) => {
 		console.warn("Using static scenes.", error);
 		return null;
 	}),
-	context: CanvasRenderingContext2D | null = null,
+	loadDefinition(journey.state().scene),
+]);
+let context: CanvasRenderingContext2D | null = null,
 	painting: Scene | undefined;
 let lost = false,
 	time = 0,
+	selectionToken = 0,
 	resizeTimer: number | undefined;
+
+function selectScene(name: SceneName, afterSelect?: () => void) {
+	const token = ++selectionToken;
+	if (isSceneLoaded(name)) {
+		journey.select(name, !renderer);
+		draw();
+		afterSelect?.();
+		return;
+	}
+	void loadDefinition(name)
+		.then(() => {
+			if (token !== selectionToken) return;
+			journey.select(name, !renderer);
+			draw();
+			afterSelect?.();
+		})
+		.catch((error: unknown) => {
+			console.warn("Scene load failed.", error);
+		});
+}
+
 const roomControls = createRoomControls((name) => {
-	journey.select(name, !renderer);
-	draw();
+	selectScene(name);
 });
 let dimensions = "";
 let touch = [0, 0, -100];
 const wind = createWind();
-const preparation = createPreparation((name) => {
-	if (!renderer || lost) return;
+const preparation = createPreparation(async (name) => {
+	if (lost) return;
 	try {
-		renderer.prepare(name);
+		await loadDefinition(name);
+		if (renderer && !lost && !document.hidden) renderer.prepare(name);
 	} catch (error) {
 		console.warn("Deferring scene preparation.", error);
 	}
@@ -58,6 +84,12 @@ const animation = createAnimation({
 		canvas.dataset.targetFps = String(fps);
 	},
 });
+
+function pendingScenes() {
+	return scenes.filter((name) =>
+		renderer ? !renderer.preparedScenes.includes(name) : !isSceneLoaded(name),
+	);
+}
 
 function fallback() {
 	animation.stop();
@@ -86,7 +118,8 @@ function fallback() {
 	fallbackCanvas.height = canvas.height;
 	context = fallbackCanvas.getContext("2d");
 	canvas.dataset.renderer = "canvas2d";
-	if (painting) drawStatic(journey.state().scene);
+	if (painting && isSceneLoaded(journey.state().scene))
+		drawStatic(journey.state().scene);
 }
 
 function drawStatic(name: SceneName) {
@@ -94,10 +127,25 @@ function drawStatic(name: SceneName) {
 }
 function draw() {
 	if (lost || !painting) return;
-	const state = journey.state();
+	const raw = journey.state();
+	if (!isSceneLoaded(raw.from)) {
+		void loadDefinition(raw.from).then(draw);
+		return;
+	}
+	let state = raw;
+	if (raw.transitioning && !isSceneLoaded(raw.to)) {
+		void loadDefinition(raw.to).then(draw);
+		state = {
+			...raw,
+			scene: raw.from,
+			to: raw.from,
+			blend: 0,
+			transitioning: false,
+		};
+	}
 	try {
 		if (renderer) renderer.draw(time, touch, state, wind.value);
-		else drawStatic(state.scene);
+		else if (isSceneLoaded(state.scene)) drawStatic(state.scene);
 	} catch (error) {
 		console.warn("Using static scene.", error);
 		fallback();
@@ -132,27 +180,21 @@ function resize() {
 	}
 	draw();
 	canvas.dataset.ready = "true";
-	if (renderer)
-		preparation.start(
-			scenes.filter((name) => !renderer!.preparedScenes.includes(name)),
-		);
+	preparation.start(pendingScenes());
 }
 for (const control of sceneButtons) {
 	if (control.hidden) continue;
 	control.addEventListener("click", () => {
-		journey.select(control.dataset.scene, !renderer);
-		draw();
-		element("#status").textContent = arrivalText(control.dataset.scene);
+		selectScene(control.dataset.scene, () => {
+			element("#status").textContent = arrivalText(control.dataset.scene);
+		});
 	});
 }
 if (!renderer) fallback();
 function sync() {
 	animation.sync();
-	if (document.hidden || !renderer || lost) preparation.stop();
-	else
-		preparation.start(
-			scenes.filter((name) => !renderer!.preparedScenes.includes(name)),
-		);
+	if (document.hidden || lost) preparation.stop();
+	else preparation.start(pendingScenes());
 }
 document.addEventListener("visibilitychange", sync);
 window.addEventListener("pagehide", (event) => {
@@ -183,6 +225,7 @@ element("main").addEventListener("pointerdown", (event) => {
 		y = event.clientY / innerHeight;
 	if (
 		state.transitioning ||
+		!isSceneLoaded(state.scene) ||
 		!hitWater(painting, state.scene, x, y, state.positions[state.scene])
 	)
 		return;

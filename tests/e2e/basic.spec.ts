@@ -11,9 +11,11 @@ test("renders production bundle and switches scenes cleanly", async ({
 	await expect(canvas).toBeVisible();
 	await expect(canvas).toHaveAttribute("data-ready", "true");
 
-	const coastBtn = page.locator('button[data-scene="coast"]');
-	await coastBtn.click();
-	await expect(coastBtn).toHaveAttribute("aria-pressed", "true");
+	for (const scene of ["ink", "city", "coast"] as const) {
+		const btn = page.locator(`button[data-scene="${scene}"]`);
+		await btn.click();
+		await expect(btn).toHaveAttribute("aria-pressed", "true");
+	}
 	expect(errors).toEqual([]);
 });
 

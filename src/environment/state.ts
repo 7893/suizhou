@@ -37,6 +37,22 @@ export function createEnvironment() {
 		if (!places[name]) throw new Error(`Unknown environment: ${name}`);
 		setTarget(name, places[name].environment);
 	}
+	function breathe(name: SceneName, time: number) {
+		const base = places[name]?.environment;
+		if (!base) throw new Error(`Unknown environment: ${name}`);
+		const seed = name.charCodeAt(0) * 0.37;
+		setTarget(name, {
+			wind:
+				base.wind +
+				Math.sin(time * 0.11 + seed) * 0.17 +
+				Math.sin(time * 0.043 - seed) * 0.09,
+			cloud:
+				base.cloud +
+				Math.sin(time * 0.067 + seed * 1.7) * 0.11 +
+				Math.cos(time * 0.029 + seed) * 0.05,
+			haze: base.haze + Math.cos(time * 0.053 - seed * 1.3) * 0.07,
+		});
+	}
 	function sample(name: SceneName, time: number, wind: ArrayLike<number>) {
 		const state = states.get(name);
 		if (!state) throw new Error(`Unknown environment: ${name}`);
@@ -58,5 +74,5 @@ export function createEnvironment() {
 		state.wind[3] = wind[3] * strength;
 		return state;
 	}
-	return { setTarget, reset, sample };
+	return { setTarget, reset, breathe, sample };
 }

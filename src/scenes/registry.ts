@@ -1,32 +1,24 @@
 /**
  * Geographic references live in config/places; composition lives beside each scene.
- * Environment state owns smooth render conditions, never fetching inside a frame.
- * Scene contract: create(width, height) returns { layers, width, height }.
- * Layer keys match shader sampler names; array ordering is never an API.
- * drawStatic(ctx, painting, boat) supplies the Canvas 2D fallback.
- * Optional uniforms() and update() encapsulate scene-specific motion.
+ * Each scene module loads on demand so initial startup fetches only the active painting,
+ * Spine beach actors load only with coast, and hidden scenes stay out of public bundles.
  */
-import type { UniformData } from "pixi.js";
-import { createCity } from "./city/painting.ts";
-import { fragment as city } from "./city/shaders/main.ts";
-import { drawStaticCity } from "./city/static.ts";
-import { createCoast } from "./coast/painting.ts";
-import { fragment as coast } from "./coast/shaders/main.ts";
-import { drawStaticCoast } from "./coast/static.ts";
-import { createGarden } from "./garden/painting.ts";
-import { fragment as garden } from "./garden/shaders/main.ts";
-import { drawStaticGarden } from "./garden/static.ts";
-import { createInk } from "./ink/painting.ts";
-import { fragment as ink } from "./ink/shaders/main.ts";
-import { drawStaticInk } from "./ink/static.ts";
-import { fishUniforms, updateFishUniforms } from "./ink/uniforms.ts";
-import { createRoom } from "./room/painting.ts";
-import { fragment as room } from "./room/shaders/main.ts";
-import { drawStaticRoom } from "./room/static.ts";
-import { roomUniforms, updateRoom } from "./room/uniforms.ts";
+import type { Texture, UniformData, WebGLRenderer } from "pixi.js";
 import type { Painting, SceneName } from "./types.ts";
 
-interface Definition {
+export interface SceneActor {
+	resourceName: string;
+	texture: Texture;
+	draw: (
+		renderer: WebGLRenderer,
+		time: number,
+		width: number,
+		height: number,
+	) => void;
+	dispose: () => void;
+}
+
+export interface SceneDefinition {
 	create: (width: number, height: number) => Painting;
 	drawStatic: (
 		ctx: CanvasRenderingContext2D,
@@ -41,32 +33,50 @@ interface Definition {
 		canvas: HTMLCanvasElement,
 		time: number,
 	) => void;
+	createActor?: () => SceneActor;
 }
-export const definitions: Record<SceneName, Definition> = {
-	room: {
-		create: createRoom,
-		drawStatic: drawStaticRoom,
-		fragment: room,
-		uniforms: roomUniforms,
-		update: updateRoom,
-	},
-	garden: {
-		create: createGarden,
-		drawStatic: drawStaticGarden,
-		fragment: garden,
-	},
-	ink: {
-		create: createInk,
-		drawStatic: drawStaticInk,
-		fragment: ink,
-		uniforms: fishUniforms,
-		update: updateFishUniforms,
-	},
-	city: {
-		create: createCity,
-		drawStatic: drawStaticCity,
-		fragment: city,
-		nearest: ["windows"],
-	},
-	coast: { create: createCoast, drawStatic: drawStaticCoast, fragment: coast },
+
+const loaders: Record<
+	SceneName,
+	() => Promise<{ definition: SceneDefinition }>
+> = {
+	ink: () => import("./ink/definition.ts"),
+	city: () => import("./city/definition.ts"),
+	coast: () => import("./coast/definition.ts"),
+	garden: () => import("./garden/definition.ts"),
+	room: () => import("./room/definition.ts"),
 };
+
+const loaded = new Map<SceneName, SceneDefinition>();
+const inflight = new Map<SceneName, Promise<SceneDefinition>>();
+
+export function isSceneLoaded(name: SceneName) {
+	return loaded.has(name);
+}
+
+export function getDefinition(name: SceneName): SceneDefinition {
+	const definition = loaded.get(name);
+	if (!definition) throw new Error(`Scene not loaded yet: ${name}`);
+	return definition;
+}
+
+export function loadDefinition(name: SceneName): Promise<SceneDefinition> {
+	const cached = loaded.get(name);
+	if (cached) return Promise.resolve(cached);
+	const pending = inflight.get(name);
+	if (pending) return pending;
+	const loader = loaders[name];
+	if (!loader) return Promise.reject(new Error(`Unknown scene: ${name}`));
+	const request = loader()
+		.then(({ definition }) => {
+			loaded.set(name, definition);
+			inflight.delete(name);
+			return definition;
+		})
+		.catch((error) => {
+			inflight.delete(name);
+			throw error;
+		});
+	inflight.set(name, request);
+	return request;
+}

@@ -1,8 +1,7 @@
 import { Ticker, WebGLRenderer } from "pixi.js";
-import { createBeachActors } from "../actors/beach.ts";
 import { createBoat } from "../actors/boat.ts";
 import { createEnvironment } from "../environment/state.ts";
-import { definitions } from "../scenes/registry.ts";
+import { getDefinition } from "../scenes/registry.ts";
 import type { JourneyState, Scene, SceneName } from "../scenes/types.ts";
 import { createCompositor } from "./compositor.ts";
 import { createGeometry } from "./pass.ts";
@@ -41,14 +40,10 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
 		return null;
 	}
 	const environment = createEnvironment();
+	const manualEnvironment = new Set<SceneName>();
 	const geometry = createGeometry();
 	const actor = createBoat();
-	const beachActors = createBeachActors();
-	const resources = createResources(
-		geometry,
-		actor.texture.source,
-		beachActors.texture.source,
-	);
+	const resources = createResources(geometry, actor.texture.source);
 	const targets = createTargets();
 	const compositor = createCompositor(targets.textures, geometry);
 	let scene: Scene;
@@ -67,9 +62,9 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
 		x: number,
 		wind: ArrayLike<number>,
 	) {
-		if (key === "coast")
-			beachActors.draw(renderer, time, scene.width, scene.height);
 		const pass = resources.prepare(key);
+		resources.drawActor(key, renderer, time, scene.width, scene.height);
+		if (!manualEnvironment.has(key)) environment.breathe(key, time);
 		const conditions = environment.sample(key, time, wind);
 		const W = scene.portrait ? 760 : 1600;
 		const H = (W * scene.height) / scene.width;
@@ -94,7 +89,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
 		boat[1] -= depth * 0.105;
 		actorScale[0] = (scale * (1 - depth * 0.18)) / W;
 		actorScale[1] = (scale * (1 - depth * 0.18)) / H;
-		definitions[key].update?.(u, canvas, time);
+		getDefinition(key).update?.(u, canvas, time);
 		renderer.render({
 			container: pass.mesh,
 			target: slot === null ? undefined : targets.get(slot),
@@ -135,12 +130,20 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
 				);
 			if (composite) compositor.draw(renderer, time, journey);
 		},
-		setEnvironment: environment.setTarget,
-		resetEnvironment: environment.reset,
+		setEnvironment(
+			name: SceneName,
+			conditions?: Parameters<typeof environment.setTarget>[1],
+		) {
+			manualEnvironment.add(name);
+			environment.setTarget(name, conditions);
+		},
+		resetEnvironment(name: SceneName) {
+			manualEnvironment.delete(name);
+			environment.reset(name);
+		},
 		dispose() {
 			resources.dispose();
 			actor.dispose();
-			beachActors.dispose();
 			compositor.dispose();
 			targets.dispose();
 			geometry.destroy();

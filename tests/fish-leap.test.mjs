@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fishState } from "../src/motion/fish.ts";
 import { LEAP_DURATION, leapingFish } from "../src/motion/fish-leap.ts";
+import { startledFish } from "../src/scenes/ink/fish-data.ts";
 
 test("a leap joins the swimming path without position or heading jumps", () => {
 	for (const aspect of [390 / 844, 1.44]) {
@@ -24,4 +25,14 @@ test("a leap joins the swimming path without position or heading jumps", () => {
 			}
 		}
 	}
+});
+
+test("nearby water touches startle swimming fish smoothly and settle back to path", () => {
+	const base = fishState(10, 1, 1.5);
+	const touch = [base[0] - 0.03, base[1] - 0.01, 10];
+	assert.deepEqual(startledFish(base, 1.5, 10, touch), base);
+	const mid = startledFish(base, 1.5, 10.6, touch);
+	assert(mid[0] > base[0] + 0.01, "fish darts away from nearby touch");
+	assert(mid[3] > base[3], "startled fish flashes slightly clearer ink");
+	assert.deepEqual(startledFish(base, 1.5, 15, touch), base);
 });

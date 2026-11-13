@@ -1,4 +1,4 @@
-import { BOAT_FRAME } from "../config/actors.ts";
+import { BOAT_FRAME, BOAT_MASK_COLORS } from "../config/actors.ts";
 import { actorSurface } from "./surface.ts";
 import "pixi.js/graphics";
 import { createTimeline, engine } from "animejs";
@@ -28,7 +28,10 @@ export function createBoat() {
 	const hullTexture = new Texture({
 		source: new CanvasSource({ resource: canvas, resolution: 4 }),
 	});
-	const hull = new Sprite({ texture: hullTexture, tint: 0 });
+	const hull = new Sprite({
+		texture: hullTexture,
+		tint: BOAT_MASK_COLORS.COVERAGE_INK,
+	});
 	const root = new Container(),
 		model = new Container();
 	model.position.set(x, y);
@@ -39,19 +42,25 @@ export function createBoat() {
 		new Graphics()
 			.moveTo(0, -5.5)
 			.lineTo(0, 0)
-			.stroke({ color: 0, width: 1.4, cap: "round" })
+			.stroke({
+				color: BOAT_MASK_COLORS.COVERAGE_INK,
+				width: 1.4,
+				cap: "round",
+			})
 			.circle(0.4, -8.2, 1.55)
-			.fill(0),
+			.fill(BOAT_MASK_COLORS.COVERAGE_INK),
 	);
 	body.alpha = 0.78;
-	const legs = new Graphics()
-		.moveTo(12, -2)
-		.lineTo(17, -1)
-		.stroke({ color: 0, width: 1.3, cap: "round", alpha: 0.78 });
+	const legs = new Graphics().moveTo(12, -2).lineTo(17, -1).stroke({
+		color: BOAT_MASK_COLORS.COVERAGE_INK,
+		width: 1.3,
+		cap: "round",
+		alpha: 0.78,
+	});
 	const arm = new Graphics()
 		.moveTo(0, 0)
 		.lineTo(4, 0)
-		.stroke({ color: 0, width: 1, cap: "round" });
+		.stroke({ color: BOAT_MASK_COLORS.COVERAGE_INK, width: 1, cap: "round" });
 	arm.position.set(0, -5.5);
 	body.addChild(arm);
 	const hand = new Container();
@@ -59,10 +68,18 @@ export function createBoat() {
 	const oar = new Graphics()
 		.moveTo(0, 0)
 		.lineTo(23, 0)
-		.stroke({ color: 0xffffff, width: 0.8, cap: "round" })
+		.stroke({
+			color: BOAT_MASK_COLORS.OAR_HIGHLIGHT,
+			width: 0.8,
+			cap: "round",
+		})
 		.moveTo(19.32, 0)
 		.lineTo(23, 0)
-		.stroke({ color: 0xffffff, width: 1.5, cap: "round" });
+		.stroke({
+			color: BOAT_MASK_COLORS.OAR_HIGHLIGHT,
+			width: 1.5,
+			cap: "round",
+		});
 	oar.rotation = 0.45;
 	oar.alpha = 0.66;
 	hand.addChild(oar);

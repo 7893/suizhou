@@ -1,11 +1,17 @@
 import { contourAt, silhouette } from "../../drawing/contour.ts";
 import type { Brush } from "../../drawing/types.ts";
+import type { KarstPeak } from "./composition.ts";
 import { peakProfiles } from "./composition.ts";
 import { paintLimestone } from "./limestone.ts";
 
-export function paintKarst(tools: Brush, W: number, H: number, peak: number[]) {
+export function paintKarst(
+	tools: Brush,
+	W: number,
+	H: number,
+	peak: KarstPeak,
+) {
 	const { ctx, noise, brush } = tools;
-	const [x, foot, width, height, strength, variant] = peak;
+	const { x, foot, width, height, strength, variant } = peak;
 	const span = width * W,
 		elevation = height * H,
 		base = foot * H;

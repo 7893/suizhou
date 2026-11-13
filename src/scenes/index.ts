@@ -1,7 +1,7 @@
 import { paintBoat } from "../drawing/boat.ts";
 import { createBrush } from "../drawing/brush.ts";
 import { canvasLayer } from "../drawing/canvas.ts";
-import { definitions } from "./registry.ts";
+import { getDefinition } from "./registry.ts";
 import type { Painting, SceneName } from "./types.ts";
 
 export function createScene(width: number, height: number) {
@@ -12,9 +12,8 @@ export function createScene(width: number, height: number) {
 	let staticBoat: HTMLCanvasElement | undefined;
 	const cache = new Map<SceneName, Painting>();
 	function get(name: SceneName) {
-		if (!definitions[name]) throw new Error(`Unknown scene: ${name}`);
-		if (!cache.has(name))
-			cache.set(name, definitions[name].create(width, height));
+		const definition = getDefinition(name);
+		if (!cache.has(name)) cache.set(name, definition.create(width, height));
 		return cache.get(name)!;
 	}
 	return {
@@ -37,7 +36,7 @@ export function createScene(width: number, height: number) {
 				);
 				staticBoat = layer.canvas;
 			}
-			definitions[name].drawStatic(context, get(name), staticBoat);
+			getDefinition(name).drawStatic(context, get(name), staticBoat);
 		},
 	};
 }

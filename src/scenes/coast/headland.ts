@@ -1,5 +1,5 @@
 import type { Random } from "../../drawing/types.ts";
-import { landforms } from "./composition.ts";
+import { landformsByFormat } from "./composition.ts";
 import { drawLandform } from "./landform.ts";
 
 export function drawHeadland(
@@ -7,13 +7,15 @@ export function drawHeadland(
 	W: number,
 	H: number,
 	random: Random,
+	portrait = false,
 ) {
+	const forms = landformsByFormat[portrait ? "portrait" : "landscape"];
 	const { left, span, shore, ridge } = drawLandform(
 		ctx,
 		W,
 		H,
 		random,
-		landforms.headland,
+		forms.headland,
 		["#68856b", "#486e57", "#7e9168"],
 		1.2,
 	);

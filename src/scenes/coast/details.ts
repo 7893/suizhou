@@ -8,6 +8,7 @@ export function drawCoastDetails(
 	H: number,
 	random: Random,
 	mask: CanvasRenderingContext2D,
+	portrait = false,
 ) {
 	let material: string | null = null;
 	function shape(points: Points, fill: string) {
@@ -28,7 +29,7 @@ export function drawCoastDetails(
 			mask.fill();
 		}
 	}
-	drawHeadland(ctx, W, H, random);
+	drawHeadland(ctx, W, H, random, portrait);
 	// Right foreground: a second sweep of sand around the open boating channel.
 	const beach = beachPath(W, H, 1);
 	const sand = ctx.createLinearGradient(0, H * 0.85, 0, H);

@@ -1,8 +1,18 @@
 import { skyEffects } from "../../../rendering/shaders/sky.ts";
+import { inkLayout } from "../composition.ts";
+
+const { portrait: sunP, landscape: sunL, radius: sunR } = inkLayout.sun;
+
 export const sky = `
 ${skyEffects}
-vec2 sunCenter(){return u_size.x/u_size.y<.85?vec2(.32,.12):vec2(.72,.205);}
-float sunRadius(){return min(u_size.x/u_size.y,1.)*.039;}
+vec2 sunCenter() {
+  return u_size.x / u_size.y < 0.85
+    ? vec2(${sunP[0]}, ${sunP[1]})
+    : vec2(${sunL[0]}, ${sunL[1]});
+}
+float sunRadius() {
+  return min(u_size.x / u_size.y, 1.0) * ${sunR};
+}
 vec3 paintSun(vec3 paper,vec2 p){
   float aspect=u_size.x/u_size.y;
   float radius=sunRadius();
