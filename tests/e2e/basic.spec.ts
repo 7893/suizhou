@@ -4,6 +4,7 @@ test("renders production bundle and switches scenes cleanly", async ({
 	page,
 }) => {
 	const issues: string[] = [];
+	await page.setViewportSize({ width: 800, height: 500 });
 	await page.route("http://localhost:4173/", async (route) => {
 		const response = await route.fetch();
 		await route.fulfill({
