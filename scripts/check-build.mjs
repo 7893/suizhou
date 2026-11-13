@@ -1,4 +1,4 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { extname } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -22,6 +22,13 @@ export async function checkBuild(root) {
 	}
 	if (required.size || files > 1000 || bytes > 20 * 1024 * 1024)
 		throw new Error("Public build violates the deployment contract");
+	const html = await readFile(new URL("index.html", root), "utf8");
+	const tags = html.match(/<(?:script|link)\b[^>]*?\bassets\/[^>]*>/g) ?? [];
+	if (
+		!tags.length ||
+		tags.some((tag) => !/\bintegrity="sha384-[A-Za-z0-9+/=]+"/.test(tag))
+	)
+		throw new Error("Missing subresource integrity on built asset tags");
 	console.log(`Validated ${files} public files (${bytes} bytes).`);
 }
 
