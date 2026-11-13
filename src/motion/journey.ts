@@ -7,11 +7,12 @@ const SPEED = 0.014;
 export const scenes = publicScenes;
 
 export function createJourney(initialX = 0.69, random = Math.random) {
+	let defaultX = initialX;
 	let scene = scenes[Math.floor(random() * scenes.length)];
 	let from = scene,
 		to = scene,
 		transitioning = false;
-	const position = { outgoing: initialX, incoming: 0.07, blend: 0 };
+	const position = { outgoing: defaultX, incoming: 0.07, blend: 0 };
 	let motion: ReturnType<typeof createTimeline>;
 	function next() {
 		return scenes[(scenes.indexOf(scene) + 1) % scenes.length];
@@ -20,13 +21,14 @@ export function createJourney(initialX = 0.69, random = Math.random) {
 		motion?.cancel();
 		from = to = scene;
 		transitioning = false;
-		Object.assign(position, { outgoing: x, blend: 0 });
+		const clampedX = Math.min(x, 0.95);
+		Object.assign(position, { outgoing: clampedX, blend: 0 });
 		motion = createTimeline({
 			autoplay: false,
 			onComplete: () => select(next()),
 		}).add(position, {
 			outgoing: 0.985,
-			duration: ((0.985 - x) / SPEED) * 1000,
+			duration: ((0.985 - clampedX) / SPEED) * 1000,
 			ease: "linear",
 		});
 	}
@@ -34,14 +36,19 @@ export function createJourney(initialX = 0.69, random = Math.random) {
 		if (!sceneOrder.includes(target) && target !== "room") return;
 		if (instant) {
 			scene = target;
-			cruise(initialX);
+			cruise(defaultX);
 			return;
 		}
 		if (to === target) return;
 		let x = position.outgoing;
 		if (transitioning) {
-			scene = position.blend < 0.5 ? from : to;
-			x = 0.3;
+			if (position.blend < 0.5) {
+				scene = from;
+				x = position.outgoing;
+			} else {
+				scene = to;
+				x = position.incoming;
+			}
 		}
 		if (scene === target) {
 			cruise(x);
@@ -66,9 +73,12 @@ export function createJourney(initialX = 0.69, random = Math.random) {
 			ease: "linear",
 		});
 	}
-	cruise(initialX);
+	cruise(defaultX);
 	return {
 		select,
+		setDefaultX(nextX: number) {
+			defaultX = nextX;
+		},
 		advance(dt: number) {
 			if (scene !== "room" || transitioning)
 				motion.seek(motion.currentTime + dt * 1000);

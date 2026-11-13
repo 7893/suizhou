@@ -1,5 +1,5 @@
 import { copy } from "../config/copy.ts";
-import type { JourneyState } from "../scenes/types.ts";
+import type { JourneyState, SceneName } from "../scenes/types.ts";
 import type { SceneButton } from "./dom.ts";
 import { element } from "./dom.ts";
 
@@ -13,8 +13,11 @@ function setLines(element: HTMLElement, lines: string[]) {
 	);
 }
 
-let shownScene = "";
-let inscription: HTMLElement;
+const cache = new WeakMap<
+	HTMLCanvasElement,
+	{ scene: SceneName | ""; inscription: HTMLElement }
+>();
+
 export function updateSceneUI(
 	canvas: HTMLCanvasElement,
 	state: JourneyState,
@@ -23,15 +26,19 @@ export function updateSceneUI(
 	const transition = String(state.transitioning);
 	if (canvas.dataset.transition !== transition)
 		canvas.dataset.transition = transition;
-	inscription ??= element(".inscription");
+	let entry = cache.get(canvas);
+	if (!entry?.inscription.isConnected) {
+		entry = { scene: "", inscription: element(".inscription") };
+		cache.set(canvas, entry);
+	}
 	const opacity = state.transitioning
 		? String(Math.abs(state.blend * 2 - 1))
 		: "1";
-	if (inscription.style.opacity !== opacity)
-		inscription.style.opacity = opacity;
-	if (shownScene === state.scene) return;
+	if (entry.inscription.style.opacity !== opacity)
+		entry.inscription.style.opacity = opacity;
+	if (entry.scene === state.scene) return;
 	canvas.dataset.scene = state.scene;
-	shownScene = state.scene;
+	entry.scene = state.scene;
 	document.body.dataset.view = state.scene;
 	const info = copy.scenes[state.scene];
 	element("h1").textContent = info.title;

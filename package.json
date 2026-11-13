@@ -7,11 +7,13 @@
 		"node": ">=24"
 	},
 	"scripts": {
-		"check": "biome check .",
+		"check": "biome check . && tsc --noEmit && node scripts/fonts.mjs --verify",
 		"test": "node --test tests/*.test.mjs",
 		"test:browser": "playwright test",
-		"build": "tsc --noEmit && vite build",
+		"build": "tsc --noEmit && vite build && node scripts/check-build.mjs",
+		"fonts": "node scripts/fonts.mjs",
 		"dev": "vite",
+		"preview": "vite preview --port 4173 --strictPort",
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {

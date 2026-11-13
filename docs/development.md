@@ -13,73 +13,57 @@ a server dependency for the published website.
 - Edit composition and painting beside each scene in `src/scenes/`.
 - Put shared brushwork in `src/drawing/`, motion in `src/motion/`, and layout
   in `src/styles/`. Do not embed interface strings in rendering modules.
-- Font subsets regenerate during build from the configured text. Full font
-  downloads stay in the ignored cache. Bundled subsets and their license notices
-  live together in `src/assets/fonts/`.
+- Font subsets live alongside their license notices in `src/assets/fonts/`.
+  After changing configured copy, regenerate subsets with `npm run fonts`;
+  `npm run check` verifies that every configured character is present in the
+  bundled subsets.
 
 ## Verification
 
-Run `npm run check`, `npm test`, and
-`python3 -m unittest discover -s tests -p 'test_*.py'`.
+Run `npm run check` and `npm test`.
 Install Chromium with `npx playwright install chromium`, then run
 `npm run build && npm run test:browser`.
 
-`check` runs strict TypeScript and unused-code checks, validates HTML text, and enforces
-small source modules. Unit tests cover timing, wind, environment boundaries,
-fish continuity, and font processing. Browser tests exercise the production
-bundle, both viewport orientations, font rendering, transitions, context
-recovery, static fallback, water masks, and resource lifetime.
-
-Internal rendering tests use a separate Vite build under `.cache/browser/`.
-The local test server exposes that fixture only to its own browser process;
-`dist/` never contains the fixture, source files, or debug exports.
-
-`npm run test:performance -- current` records per-scene draw counts, startup
-observations, and bundle sizes in `.cache/performance/current.json`. Compare
-under the same browser, hardware, scene and load; software-rendered timings
-do not establish device FPS. See `performance.md` for measured changes.
+`check` runs Biome formatting/lint rules, strict TypeScript checks, and bundled
+font glyph verification. `build` type-checks, bundles `dist/` with Vite, and
+validates the public file allowlist and size budget via `scripts/check-build.mjs`.
+Unit tests cover timing, wind, environment boundaries, fish continuity, HTML
+copy escaping, asset origin validation, and font table renaming. Browser E2E
+tests exercise the built production bundle via `vite preview`, including scene
+switching and the static Canvas 2D fallback across viewport resizes.
 
 ## Repository layout
 
 - `src/`: runtime code, styles, configured text, and bundled font assets.
-- `scripts/`: build, validation, font processing, and deployment commands.
-- `tests/`: unit tests, browser checks, and receiver regression tests.
-- `docs/`: architecture, development guidance, and engineering records.
-- `ops/`: restricted deployment receiver and its operating instructions.
+- `public/`: static license notices and `robots.txt` copied into `dist/`.
+- `scripts/`: build output validation, font subsetting, and HTML copy helpers.
+- `tests/`: Node unit tests and Playwright browser E2E checks.
+- `docs/`: architecture, development guidance, and historical engineering records.
 - `licenses/`: upstream notices that need to accompany bundled dependencies.
 
 Keep only the Vite entry template and tool configuration at the root alongside
 project metadata. There is no generated HTML copy or Pages-specific marker.
-Dependencies, build output, font downloads, browser fixtures, profiling reports,
-coverage, Python bytecode, editor files, and local environment files are ignored.
-Keep the lockfile, tests, license notices, and historical engineering records.
+Dependencies, build output, font downloads, browser reports, coverage, editor
+files, and local environment files are ignored. Keep the lockfile, tests,
+license notices, and historical engineering records.
 
 ## Delivery
 
 Builds include project, font, and bundled dependency notices. Runtime packages
 are bundled locally; browsers do not fetch JavaScript from third-party CDNs.
 Do not add private values to browser configuration or `VITE_*` variables.
-An optional private `ASSET_BASE_URL` selects the production asset origin at build
-time. Its resulting public resource URLs are visible to website visitors; it is
-not a secret. The concrete deployment addresses stay outside version control.
-See `../ops/README.md` for the restricted deployment procedure.
+An optional `ASSET_BASE_URL` selects the HTTPS asset CDN origin at build time.
+Its resulting public resource URLs are visible to website visitors; it is not a
+secret. Concrete deployment credentials stay in GitHub Actions secrets outside
+version control, and `.github/workflows/deploy.yml` deploys to the target server
+only after the `Check` workflow succeeds on `main`.
 
 ## Long-running displays
 
-`npm run test:browser` includes 48 hours of accelerated journey progress,
-interrupted transitions, 24 resizes, forced garbage collection, and checks for
-bounded GPU objects, retained heap, DOM nodes, and listeners. This stresses
-resource lifetime; it does not draw 48 hours of actual frames.
-
-`npm run test:endurance` keeps the production page rendering for two real minutes.
-Use `ENDURANCE_SECONDS=21600 npm run test:endurance` for a six-hour run, or
-`ENDURANCE_SECONDS=86400 npm run test:endurance` for a day. Test on the actual
-display/browser/GPU before unattended installation; software Chromium cannot
-certify a particular graphics driver or indefinitely stable uptime.
-
 Keep one Pixi Ticker frame loop. The render-rate and maintenance tickers advance
 manually, and Anime timelines are paused and explicitly cancelled when replaced
-or finished.
+or finished. Repeated frame-rate drops back off recovery attempts to avoid
+60/30 fps oscillation on constrained GPUs.
 Scene caches are limited to three paintings; resizing destroys obsolete textures.
 All passes share one fullscreen geometry. Internal resolution is capped at
 1.8 million pixels to bound Canvas and GPU memory on high-density displays.

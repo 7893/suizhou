@@ -10,5 +10,5 @@ export function assetBase(value) {
 		url.pathname !== "/"
 	)
 		throw new Error("ASSET_BASE_URL must be a plain HTTPS origin");
-	return url.origin + "/";
+	return `${url.origin}/`;
 }

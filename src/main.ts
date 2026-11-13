@@ -14,6 +14,14 @@ import type { Scene, SceneName } from "./scenes/types.ts";
 import { hitWater } from "./scenes/water-hit.ts";
 
 const canvas = element<HTMLCanvasElement>("#landscape");
+const sceneButtons = [
+	...document.querySelectorAll<SceneButton>("[data-scene]"),
+];
+const journey = createJourney(innerWidth / innerHeight < 0.85 ? 0.64 : 0.69);
+for (const control of sceneButtons)
+	control.hidden = !scenes.includes(control.dataset.scene);
+updateSceneUI(canvas, journey.state(), sceneButtons);
+
 let renderer = await createRenderer(canvas).catch((error: unknown) => {
 		console.warn("Using static scenes.", error);
 		return null;
@@ -23,10 +31,6 @@ let renderer = await createRenderer(canvas).catch((error: unknown) => {
 let lost = false,
 	time = 0,
 	resizeTimer: number | undefined;
-const journey = createJourney(innerWidth / innerHeight < 0.85 ? 0.64 : 0.69);
-const sceneButtons = [
-	...document.querySelectorAll<SceneButton>("[data-scene]"),
-];
 const roomControls = createRoomControls((name) => {
 	journey.select(name, !renderer);
 	draw();
@@ -64,18 +68,20 @@ function fallback() {
 	canvas.style.pointerEvents = "none";
 	let fallbackCanvas = document.getElementById(
 		"fallback-canvas",
-	) as HTMLCanvasElement;
+	) as HTMLCanvasElement | null;
 	if (!fallbackCanvas) {
 		fallbackCanvas = document.createElement("canvas");
 		fallbackCanvas.id = "fallback-canvas";
-		fallbackCanvas.style.position = "absolute";
-		fallbackCanvas.style.top = "0";
-		fallbackCanvas.style.left = "0";
-		fallbackCanvas.style.width = "100%";
-		fallbackCanvas.style.height = "100%";
-		fallbackCanvas.style.zIndex = "-1";
+		Object.assign(fallbackCanvas.style, {
+			position: "absolute",
+			inset: "0",
+			width: "100%",
+			height: "100%",
+			zIndex: "-1",
+		});
 		canvas.parentElement?.appendChild(fallbackCanvas);
 	}
+	fallbackCanvas.style.display = "block";
 	fallbackCanvas.width = canvas.width;
 	fallbackCanvas.height = canvas.height;
 	context = fallbackCanvas.getContext("2d");
@@ -107,6 +113,14 @@ function resize() {
 	dimensions = key;
 	canvas.width = width;
 	canvas.height = height;
+	const fallbackCanvas = document.getElementById(
+		"fallback-canvas",
+	) as HTMLCanvasElement | null;
+	if (fallbackCanvas) {
+		fallbackCanvas.width = width;
+		fallbackCanvas.height = height;
+	}
+	journey.setDefaultX(width / height < 0.85 ? 0.64 : 0.69);
 	painting = createScene(width, height);
 	if (renderer) {
 		try {
@@ -124,7 +138,6 @@ function resize() {
 		);
 }
 for (const control of sceneButtons) {
-	control.hidden = !scenes.includes(control.dataset.scene);
 	if (control.hidden) continue;
 	control.addEventListener("click", () => {
 		journey.select(control.dataset.scene, !renderer);
@@ -168,7 +181,11 @@ element("main").addEventListener("pointerdown", (event) => {
 	const state = journey.state();
 	const x = event.clientX / innerWidth,
 		y = event.clientY / innerHeight;
-	if (state.transitioning || !hitWater(painting, state.scene, x, y)) return;
+	if (
+		state.transitioning ||
+		!hitWater(painting, state.scene, x, y, state.positions[state.scene])
+	)
+		return;
 	touch = [x, y, time];
 	draw();
 });

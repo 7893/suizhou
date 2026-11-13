@@ -4,7 +4,8 @@ export function createCadence() {
 	let fps = 60,
 		interval = 16.67,
 		cost = 0,
-		windowTime = 0;
+		windowTime = 0,
+		strikes = 0;
 	return {
 		get fps() {
 			return fps;
@@ -16,10 +17,12 @@ export function createCadence() {
 			windowTime += delta;
 			if (fps === 60 && windowTime > 2500 && (interval > 23 || cost > 13)) {
 				fps = 30;
+				strikes++;
 				windowTime = 0;
 			} else if (
 				fps === 30 &&
-				windowTime > 10000 &&
+				strikes < 3 &&
+				windowTime > 10000 * strikes &&
 				interval < 19 &&
 				cost < 8
 			) {
@@ -28,9 +31,11 @@ export function createCadence() {
 			}
 		},
 		reset() {
+			fps = 60;
 			interval = 16.67;
 			cost = 0;
 			windowTime = 0;
+			strikes = 0;
 		},
 	};
 }

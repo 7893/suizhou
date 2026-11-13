@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 import { create } from "fontkit";
 import subsetFont from "subset-font";
 import { copy } from "../src/config/copy.ts";
@@ -71,4 +72,22 @@ export async function buildFonts() {
 			`${font.name}: ${text.length} characters, ${subset.length} bytes`,
 		);
 	}
+}
+
+export async function verifyFonts() {
+	for (const font of fonts) {
+		const text = [...new Set(font.text)].sort().join("");
+		const subset = await readFile(
+			new URL(`src/assets/fonts/${font.name}.woff2`, root),
+		);
+		verifyGlyphs(subset, text, font.name);
+	}
+}
+
+if (
+	process.argv[1] &&
+	pathToFileURL(process.argv[1]).href === import.meta.url
+) {
+	if (process.argv.includes("--verify")) await verifyFonts();
+	else await buildFonts();
 }

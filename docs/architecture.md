@@ -101,17 +101,18 @@ font licenses, project LICENSE/NOTICE, and dependency notices in the distributio
 Do not publish source maps, credentials, private keys, or deployment destinations.
 Browser environment variables are public: never put credentials in `VITE_*`.
 
-Deployment remains a signed, clean checkout sent through the existing restricted
-receiver. Preserve its archive allowlist and existing unrelated hosted files.
-Do not change TLS, DNS, account privileges, or infrastructure during this migration.
+Deployment runs from signed `main` commits after CI verification succeeds,
+syncing the validated `dist/` output while preserving content-addressed assets
+and unrelated hosted files. Do not change TLS, DNS, account privileges, or
+infrastructure casually.
 
 ## Maintenance rules
 
 Use current stable major versions, pin resolutions in the lockfile, and review
 major upgrades deliberately. Type checking is separate from Vite transpilation.
-Keep modules focused and below the existing 180-line review threshold. Delete
-superseded infrastructure instead of maintaining parallel old/new renderers.
-Tests assert behavior and resource lifecycle rather than private GL call counts.
+Keep modules focused and concise. Delete superseded infrastructure instead of
+maintaining parallel old/new renderers. Tests assert behavior and resource
+lifecycle rather than private GL call counts.
 
 The migration is accepted only after the checks in `migration.md` pass; reduced
 source size alone is not evidence of equivalent visuals or better performance.

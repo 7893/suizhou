@@ -1,13 +1,27 @@
 name: Deploy
 on:
-  push:
+  workflow_run:
+    workflows: ["Check"]
+    types: [completed]
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -25,6 +39,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          rsync -avzO -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15" --delete --exclude='pyq*.jpg' dist/ $SSH_USER@$SSH_HOST:/var/www/suizhou/releases/live/
-          rsync -avzO -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15" dist/assets/ $SSH_USER@$SSH_HOST:/var/www/suizhou/assets/
-          ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "sudo ln -sfn /var/www/suizhou/releases/live /var/www/suizhou/current"
+          rsync -avzO -e "ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15" --delete --exclude='pyq*.jpg' dist/ $SSH_USER@$SSH_HOST:/var/www/suizhou/releases/live/
+          rsync -avzO -e "ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15" dist/assets/ $SSH_USER@$SSH_HOST:/var/www/suizhou/assets/
+          ssh -o StrictHostKeyChecking=accept-new $SSH_USER@$SSH_HOST "sudo ln -sfn /var/www/suizhou/releases/live /var/www/suizhou/current"

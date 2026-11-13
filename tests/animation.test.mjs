@@ -14,6 +14,19 @@ test("cadence backs off under sustained pressure and recovers without oscillatio
 	assert.equal(c.fps, 30);
 	for (let i = 0; i < 700; i++) c.sample(1000 / 60, 3);
 	assert.equal(c.fps, 60);
+	// Repeated drops back off recovery and lock at 30fps after 3 strikes.
+	for (let strike = 2; strike <= 3; strike++) {
+		for (let i = 0; i < 120; i++) c.sample(1000 / 30, 17);
+		assert.equal(c.fps, 30);
+		if (strike < 3) {
+			for (let i = 0; i < 1500; i++) c.sample(1000 / 60, 3);
+			assert.equal(c.fps, 60);
+		}
+	}
+	for (let i = 0; i < 3000; i++) c.sample(1000 / 60, 3);
+	assert.equal(c.fps, 30);
+	c.reset();
+	assert.equal(c.fps, 60);
 });
 
 test("render throttling never throttles journey time; resuming excludes hidden time", (t) => {
@@ -134,6 +147,8 @@ test("authored transitions preserve easing and can be interrupted", () => {
 	assert(Math.abs(state.positions.ink - 0.725) < 0.000001);
 	assert(Math.abs(state.positions.city - 0.145) < 0.000001);
 	journey.select("coast");
+	state = journey.state();
+	assert(Math.abs(state.positions.city - 0.145) < 0.000001);
 	journey.advance(5);
 	state = journey.state();
 	assert.equal(state.scene, "coast");
