@@ -34,11 +34,23 @@ export function paintKarst(
 		left + span,
 		base,
 	);
-	wash.addColorStop(0, `rgba(61,83,68,${strength * 0.77})`);
-	wash.addColorStop(0.45, `rgba(91,109,86,${strength * 0.56})`);
-	wash.addColorStop(0.85, `rgba(111,122,97,${strength * 0.38})`);
-	wash.addColorStop(1, `rgba(129,136,109,${strength * 0.12})`);
+	wash.addColorStop(0, `rgba(58,80,67,${strength * 0.78})`);
+	wash.addColorStop(0.45, `rgba(89,107,85,${strength * 0.56})`);
+	wash.addColorStop(0.82, `rgba(116,121,95,${strength * 0.36})`);
+	wash.addColorStop(1, `rgba(136,134,107,${strength * 0.12})`);
 	ctx.fillStyle = wash;
+	ctx.fill(path);
+	// Subtle Qianjiang (light-ochre) sunlit warmth along the upper right flank facing the pale sun.
+	const sunRim = ctx.createLinearGradient(
+		left + span * 0.38,
+		base - elevation,
+		left + span * 0.96,
+		base - elevation * 0.12,
+	);
+	sunRim.addColorStop(0, "rgba(176,132,96,0)");
+	sunRim.addColorStop(0.55, `rgba(176,132,96,${strength * 0.13})`);
+	sunRim.addColorStop(1, `rgba(196,154,114,${strength * 0.22})`);
+	ctx.fillStyle = sunRim;
 	ctx.fill(path);
 	paintLimestone(tools, { left, span, base, elevation, strength, ridge });
 	ctx.restore();

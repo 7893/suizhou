@@ -29,6 +29,25 @@ export function paintSettlement(tools: Brush, W: number, H: number) {
 		);
 		ctx.fillStyle = ink(0.26);
 		ctx.fillRect(x - s * 0.1, y + s * 0.24, s * 0.2, s * 0.5);
+		// Faint wisp of hearth smoke curling from one hamlet roof.
+		if (i === 1) {
+			ctx.save();
+			ctx.strokeStyle = "rgba(232,228,214,.36)";
+			ctx.lineWidth = Math.max(1.2, s * 0.26);
+			ctx.lineCap = "round";
+			ctx.beginPath();
+			ctx.moveTo(x + s * 0.22, y - s * 0.42);
+			ctx.bezierCurveTo(
+				x + s * 0.55,
+				y - s * 1.4,
+				x - s * 0.25,
+				y - s * 2.5,
+				x + s * 0.45,
+				y - s * 3.8,
+			);
+			ctx.stroke();
+			ctx.restore();
+		}
 	}
 }
 

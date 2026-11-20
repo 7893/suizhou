@@ -4,11 +4,12 @@ export function paintLounger(
 	ctx: CanvasRenderingContext2D,
 	W: number,
 	H: number,
+	portrait = false,
 ) {
 	ctx.save();
-	ctx.translate(W * 0.23, H * 0.969);
-	const scale = W / 1200;
-	ctx.scale(scale, scale);
+	ctx.translate(W * (portrait ? 0.83 : 0.23), H * (portrait ? 0.96 : 0.969));
+	const scale = (portrait ? W * 1.15 : W) / 1200;
+	ctx.scale(portrait ? -scale : scale, scale);
 	ctx.fillStyle = "#77684b33";
 	ctx.beginPath();
 	ctx.ellipse(2, 3, 23, 4, -0.12, 0, Math.PI * 2);

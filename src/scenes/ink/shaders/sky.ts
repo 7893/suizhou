@@ -19,7 +19,9 @@ vec3 paintSun(vec3 paper,vec2 p){
   float r=length((p-sunCenter())*vec2(aspect,1.));
   float edge=radius+(noise(p*180.)-.5)*radius*.035;
   float disc=1.-smoothstep(edge-radius*.025,edge+radius*.025,r);
-  return mix(paper,vec3(.64,.36,.23),disc*.23);
+  float halo=exp(-r/(radius*3.8))*.09;
+  vec3 warm=mix(paper,vec3(.78,.56,.38),halo);
+  return mix(warm,vec3(.66,.35,.22),disc*.25);
 }
 vec3 paintPassingCloud(vec3 color,vec3 paper,vec2 p){
   // One continuous cloud crosses the lower half of the sun, then leaves clear sky.

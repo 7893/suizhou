@@ -23,7 +23,7 @@ vec3 courtyard(vec2 p){
   return over(sky,sampleLayer(u_buildings,p));
 }
 float waterAt(vec2 p){
-  float solid=max(sampleLayer(u_bank,p).a,sampleBoat(p-u_boat).a);
+  float solid=max(sampleLayer(u_bank,p).a,sampleDayBoat(p-u_boat).a);
   solid=max(solid,sampleLayer(u_buildings,p).a);
   solid=max(solid,sampleLayer(u_foliage,p).a);
   return smoothstep(.663,.68,p.y)*(1.-smoothstep(.08,.35,solid));
@@ -46,13 +46,13 @@ void main(){
     color+=vec3(.19,.22,.16)*touchRipple(p,.66,waterAt(u_touch.xy));
     vec2 reflectedBoat=vec2(p.x+n.x*.01,2.*(u_boatCenter.y+u_boat.y+.008)-p.y);
     if(p.y>u_boatCenter.y+u_boat.y+.008)
-      color=mix(color,vec3(.16,.25,.21),sampleBoat(reflectedBoat-u_boat).a*.25);
+      color=mix(color,vec3(.16,.25,.21),sampleDayBoat(reflectedBoat-u_boat).a*.25);
   }
   if(p.y>.66)color=over(color,sampleLayer(u_buildings,p));
   vec2 leaf=p;
   leaf.x+=(sin(u_time*1.1+p.y*13.)*.0025+u_wind.x*.002)*smoothstep(.1,.4,p.y);
   color=over(color,sampleLayer(u_foliage,leaf));
-  vec4 actor=sampleBoat(p-u_boat);
+  vec4 actor=sampleDayBoat(p-u_boat);
   color=mix(color,vec3(.18,.23,.20),actor.a);
   color=mix(color,vec3(.55,.47,.33),boatMasks(p-u_boat).r*.8);
   // A few drifting petals, never an accumulating particle allocation.

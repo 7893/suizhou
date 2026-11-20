@@ -6,6 +6,7 @@ export function paintBoat(
 	y: number,
 	scale: number,
 	crew = true,
+	lantern = true,
 ) {
 	const { ctx, ink, brush, line } = tools;
 	ctx.save();
@@ -63,19 +64,21 @@ export function paintBoat(
 		ink(0.58),
 		0.8,
 	);
-	// Stern-mounted lantern stays clear of the passenger.
-	line(
-		[
-			[lamp.mast, -1],
-			[lamp.mast, lamp.top],
-			[lamp.x, lamp.top],
-			[lamp.x, lamp.y - 2],
-		],
-		ink(0.66),
-		0.7,
-	);
-	ctx.fillStyle = ink(0.6);
-	ctx.fillRect(lamp.x - 1.3, lamp.y - 2, 2.6, 4);
+	// Stern-mounted lantern stays clear of the passenger (omitted in daytime scenes).
+	if (lantern) {
+		line(
+			[
+				[lamp.mast, -1],
+				[lamp.mast, lamp.top],
+				[lamp.x, lamp.top],
+				[lamp.x, lamp.y - 2],
+			],
+			ink(0.66),
+			0.7,
+		);
+		ctx.fillStyle = ink(0.6);
+		ctx.fillRect(lamp.x - 1.3, lamp.y - 2, 2.6, 4);
+	}
 	if (crew) {
 		ctx.fillStyle = ink(0.78);
 		ctx.beginPath();

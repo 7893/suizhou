@@ -1,4 +1,8 @@
-import { BOAT_FRAME, BOAT_MASK_COLORS } from "../config/actors.ts";
+import {
+	BOAT_FRAME,
+	BOAT_MASK_COLORS,
+	BOAT_LANTERN as lamp,
+} from "../config/actors.ts";
 import { actorSurface } from "./surface.ts";
 import "pixi.js/graphics";
 import { createTimeline, engine } from "animejs";
@@ -24,7 +28,7 @@ export function createBoat() {
 	canvas.height = height * 4;
 	const ctx = canvas.getContext("2d")!;
 	ctx.scale(4, 4);
-	paintBoat(createBrush(ctx, 707), x, y, 1, false);
+	paintBoat(createBrush(ctx, 707), x, y, 1, false, false);
 	const hullTexture = new Texture({
 		source: new CanvasSource({ resource: canvas, resolution: 4 }),
 	});
@@ -83,7 +87,20 @@ export function createBoat() {
 	oar.rotation = 0.45;
 	oar.alpha = 0.66;
 	hand.addChild(oar);
-	model.addChild(legs, body, hand);
+	const lantern = new Graphics()
+		.moveTo(lamp.mast, -1)
+		.lineTo(lamp.mast, lamp.top)
+		.lineTo(lamp.x, lamp.top)
+		.lineTo(lamp.x, lamp.y - 2)
+		.stroke({
+			color: BOAT_MASK_COLORS.LANTERN_MASK,
+			width: 0.75,
+			cap: "round",
+		})
+		.rect(lamp.x - 1.3, lamp.y - 2, 2.6, 4)
+		.fill(BOAT_MASK_COLORS.LANTERN_MASK);
+	lantern.alpha = 0.72;
+	model.addChild(lantern, legs, body, hand);
 	const duration = ((2 * Math.PI) / 1.75) * 1000;
 	const motion = createTimeline({
 		autoplay: false,

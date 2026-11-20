@@ -39,7 +39,7 @@ export function createCoast(width: number, height: number) {
 	ctx.restore();
 	drawIslands(ctx, W, H, random, portrait);
 	drawCoastDetails(ctx, W, H, random, material.ctx, portrait);
-	paintLounger(ctx, W, H);
+	paintLounger(ctx, W, H, portrait);
 	const palmLayers = [];
 	for (const { root, crown } of palmsByFormat[
 		portrait ? "portrait" : "landscape"

@@ -17,6 +17,23 @@ export function drawBoardwalk(
 	};
 	const scale = Math.min(W, H) / 700;
 	try {
+		// Soft cast shadow from the upper-left coastal sun onto the shallow water and beach.
+		const s0 = point(0, 0),
+			s1 = point(24, 0),
+			s2 = point(24, 2),
+			s3 = point(0, 2);
+		const sx = 9 * scale,
+			sy = 14 * scale;
+		ctx.save();
+		ctx.fillStyle = "rgba(22, 62, 58, 0.17)";
+		ctx.beginPath();
+		ctx.moveTo(s0[0] + sx * 0.7, s0[1] + sy * 0.85);
+		ctx.lineTo(s1[0] + sx, s1[1] + sy);
+		ctx.lineTo(s2[0] + sx, s2[1] + sy * 1.1);
+		ctx.lineTo(s3[0] + sx * 0.7, s3[1] + sy * 0.95);
+		ctx.closePath();
+		ctx.fill();
+		ctx.restore();
 		// Paired posts, with the near-side beam following the very same projected edge.
 		for (const column of [1, 7, 13, 19, 24]) {
 			const depth = 0.7 + column / 80,
