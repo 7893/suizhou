@@ -6,6 +6,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: deploy-main
   cancel-in-progress: false
@@ -18,6 +21,7 @@ jobs:
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
@@ -32,16 +36,34 @@ jobs:
           ASSET_BASE_URL: ${{ secrets.ASSET_BASE_URL }}
       - name: Pre-compress static assets
         run: |
+          set -euo pipefail
           find dist -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.txt' \) -exec gzip -9 -k -f {} +
-      - name: Deploy to SGA Server
+      - name: Deploy to Server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_KEY }}
           SSH_HOST: ${{ secrets.DEPLOY_HOST }}
           SSH_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          rsync -avzO -e "ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15" --delete --exclude='pyq*.jpg' dist/ $SSH_USER@$SSH_HOST:/var/www/suizhou/releases/live/
-          rsync -avzO -e "ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15" dist/assets/ $SSH_USER@$SSH_HOST:/var/www/suizhou/assets/
-          ssh -o StrictHostKeyChecking=accept-new $SSH_USER@$SSH_HOST "sudo ln -sfn /var/www/suizhou/releases/live /var/www/suizhou/current"
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.ssh"
+          SSH_KEY="$HOME/.ssh/id_ed25519"
+          SSH_KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts"
+          trap 'rm -f "$SSH_KEY"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_KEY"
+          chmod 600 "$SSH_KEY"
+          if [[ -n "${SSH_KNOWN_HOSTS:-}" ]]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > "$SSH_KNOWN_HOSTS_FILE"
+            chmod 600 "$SSH_KNOWN_HOSTS_FILE"
+            HOST_KEY_CHECK="yes"
+          else
+            echo "::warning::DEPLOY_KNOWN_HOSTS secret is not set; falling back to accept-new host-key checking."
+            HOST_KEY_CHECK="accept-new"
+          fi
+          SSH_ARGS=(-i "$SSH_KEY" -o BatchMode=yes -o "StrictHostKeyChecking=${HOST_KEY_CHECK}" -o "UserKnownHostsFile=${SSH_KNOWN_HOSTS_FILE}" -o ConnectTimeout=15)
+          SSH_CMD="ssh ${SSH_ARGS[*]}"
+          rsync -avzO -e "$SSH_CMD" dist/assets/ "$SSH_USER@$SSH_HOST:/var/www/suizhou/assets/"
+          rsync -avzO -e "$SSH_CMD" dist/assets/ "$SSH_USER@$SSH_HOST:/var/www/suizhou/releases/live/assets/"
+          rsync -avzO -e "$SSH_CMD" --delay-updates --delete-after --exclude='pyq*.jpg' dist/ "$SSH_USER@$SSH_HOST:/var/www/suizhou/releases/live/"
+          ssh "${SSH_ARGS[@]}" "$SSH_USER@$SSH_HOST" "sudo ln -sfn /var/www/suizhou/releases/live /var/www/suizhou/current"

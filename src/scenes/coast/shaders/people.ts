@@ -15,7 +15,8 @@ vec3 beachPeople(vec3 color,vec2 p){
     vec2 uv=(local+vec2(32.,57.))/vec2(64.);
     if(all(greaterThanEqual(uv,vec2(0)))&&all(lessThanEqual(uv,vec2(1)))){
       uv.x=(uv.x+float(i))/2.;
-      color=over(color,texture(u_beachCrew,uv));
+      vec4 s=texture(u_beachCrew,uv);
+      color=color*(1.-s.a)+s.rgb;
     }
   }
   return color;

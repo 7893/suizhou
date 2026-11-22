@@ -10,9 +10,6 @@
 	.inscription p {
 		font-size: 11px;
 	}
-	.signature {
-		font-size: 8px;
-	}
 	.seal {
 		width: 21px;
 		font-size: 12px;
@@ -68,6 +65,7 @@
 	border-bottom-color: currentColor;
 }
 body[data-view="city"] {
+	background: #0e1820;
 	color: #e1cfab;
 }
 body[data-view="city"] .inscription p {
@@ -115,6 +113,9 @@ body[data-view="coast"] .work-mark {
 body[data-view="coast"] button {
 	color: #294c42;
 	text-shadow: 0 1px 8px rgba(242, 232, 205, 0.85);
+}
+body[data-view="coast"] .scene-nav button:not([aria-pressed="true"]) {
+	opacity: 0.78;
 }
 @media (max-width: 400px) {
 	.colophon {

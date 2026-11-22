@@ -20,8 +20,3 @@ h1 {
 .signature {
 	font-family: "Scene Poem", "Kaiti SC", "KaiTi", serif;
 }
-@media (max-width: 600px) {
-	.signature {
-		font-size: 10px;
-	}
-}

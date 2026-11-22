@@ -1,3 +1,10 @@
+import { skyline } from "../composition.ts";
+
+const { tower: towerL } = skyline.landscape;
+const { tower: towerP } = skyline.portrait;
+const glFloat = (value: number) =>
+	Number.isInteger(value) ? value.toFixed(1) : String(value);
+
 export const lights = `
 float roomState(vec2 id,float epoch){
   return step(.43,hash(id+vec2(epoch*7.13,epoch*3.71)));
@@ -15,9 +22,11 @@ float lightLevel(vec2 p){
   float sequence=smoothstep(.74,.82,fract(floorClock))*(1.-smoothstep(.93,1.,fract(floorClock)));
   float rooms=max(occupied,sequence)*1.9;
   float level=mix(1.,rooms,step(.05,room.a));
-  float top=u_size.x/u_size.y<.85?.35:.28;
-  float width=u_size.x/u_size.y<.85?.095:.045;
-  float tower=step(abs(p.x-.47),width*.64)*step(top,p.y)*step(p.y,.42);
+  bool portrait=u_size.x/u_size.y<.85;
+  float towerX=portrait?${glFloat(towerP.x)}:${glFloat(towerL.x)};
+  float top=portrait?${glFloat(towerP.top)}:${glFloat(towerL.top)};
+  float width=portrait?${glFloat(towerP.width)}:${glFloat(towerL.width)};
+  float tower=step(abs(p.x-towerX),width*.64)*step(top,p.y)*step(p.y,.42);
   float band=exp(-pow((fract(u_time*.065)-(p.y-top)/(.59-top))/.15,2.));
   level=mix(level,.65+band*2.8,tower);
   float river=smoothstep(.565,.595,p.y);

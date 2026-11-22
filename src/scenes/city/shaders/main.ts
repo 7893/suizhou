@@ -130,6 +130,10 @@ void main() {
   // Evening strollers along the opposite promenade with natural stride bobbing and lamp rim-light.
   if (p.y > 0.594 && p.y < 0.618) {
     float scale = max(0.65, u_size.y / 1000.0);
+    // Promenade trees share u_buildings over an opaque #162b2d bank, so detect
+    // dense green canopy boughs over blue-slate masonry via green-over-blue excess.
+    vec3 foliage = sampleLayer(u_buildings, p - vec2(0.0, 0.014)).rgb;
+    float canopy = smoothstep(0.0, 0.028, foliage.g - foliage.b);
     for (int i = 0; i < 6; i++) {
       float fi = float(i);
       float dir = mod(fi, 2.0) < 0.5 ? 1.0 : -1.0;
@@ -150,8 +154,6 @@ void main() {
         float legB = (1.0 - smoothstep(0.35, 0.75, abs(q.x + sin(stride) * 0.65)))
           * smoothstep(-1.1, -0.5, q.y) * (1.0 - smoothstep(0.8, 1.3, q.y));
         float figure = clamp(max(head, max(torso, max(legA, legB))), 0.0, 1.0);
-        // Softly shelter strollers behind denser promenade tree canopies.
-        float canopy = smoothstep(0.55, 0.95, sampleLayer(u_buildings, p - vec2(0.0, 0.008)).a);
         vec3 coat = mix(vec3(0.055, 0.095, 0.105), vec3(0.22, 0.18, 0.12), head * 0.35);
         color = mix(color, coat, figure * (0.82 - canopy * 0.32));
       }
@@ -168,7 +170,7 @@ void main() {
   vec4 neighbor = sampleBoat(p - u_boat + vec2(0.0, 1.2 / u_size.y));
   vec2 boatWorld = u_boatCenter + u_boat;
   float bridgeAndBankGlow = max(bridgeVaultGlow(boatWorld.x) * 0.45, nearBankWarmth(boatWorld));
-  float rim = max(0.0, neighbor.a - boat.a * (1.0 - bank.a));
+  float rim = max(0.0, neighbor.a - boat.a);
   vec3 hullTone = mix(vec3(0.042, 0.078, 0.094), vec3(0.10, 0.088, 0.062), 0.3 + bridgeAndBankGlow * 0.5);
   color = mix(color, hullTone, boat.a * (1.0 - bank.a));
   color += vec3(0.95, 0.68, 0.34) * rim * (0.78 + bridgeAndBankGlow * 0.48) * (1.0 - bank.a);

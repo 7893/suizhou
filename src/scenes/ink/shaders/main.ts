@@ -39,10 +39,6 @@ void main() {
   color = paintPassingCloud(color, paper, p);
   color = paintWater(color, paper, p);
   color = paintFish(color, p);
-  color = over(color, sampleLayer(u_shore, inkParallax(p, 0.032)));
-  float bend = pow(clamp((0.89 - p.y) / 0.27, 0.0, 1.0), 2.0);
-  float wind = (u_wind.x * 0.75 + sin(u_time * 0.85 + p.y * 13.0) * 0.20) * 0.008 * bend;
-  color = over(color, sampleLayer(u_foliage, inkParallax(p, 0.04) + vec2(wind, 0.0)));
   // The small boat moves independently of the paper and mountain layers (clean daytime skiff).
   vec4 boatInk = sampleDayBoat(p - u_boat);
   color = over(color, boatInk);
@@ -50,6 +46,10 @@ void main() {
   vec4 reflectedBoat = sampleDayBoat(boatReflection + vec2(sin(p.y * 220.0 - u_time) * 0.0022, 0.0));
   reflectedBoat.a *= smoothstep(u_boatCenter.y + 0.004 + u_boat.y, u_boatCenter.y + 0.010 + u_boat.y, p.y) * 0.22;
   color = over(color, reflectedBoat);
+  color = over(color, sampleLayer(u_shore, inkParallax(p, 0.032)));
+  float bend = pow(clamp((0.89 - p.y) / 0.27, 0.0, 1.0), 2.0);
+  float wind = (u_wind.x * 0.75 + sin(u_time * 0.85 + p.y * 13.0) * 0.20) * 0.008 * bend;
+  color = over(color, sampleLayer(u_foliage, inkParallax(p, 0.04) + vec2(wind, 0.0)));
   outColor = vec4(color, 1.0);
 }
 `;

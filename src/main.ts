@@ -4,6 +4,7 @@ import { element } from "./app/dom.ts";
 import { updateSceneUI } from "./app/interface.ts";
 import { createPreparation } from "./app/preparation.ts";
 import { createRoomControls } from "./app/room-controls.ts";
+import { createSceneLoader } from "./app/scene-loader.ts";
 import { viewportSize } from "./app/viewport.ts";
 import { arrivalText } from "./config/copy.ts";
 import { createJourney, scenes } from "./motion/journey.ts";
@@ -28,7 +29,10 @@ let [renderer] = await Promise.all([
 		console.warn("Using static scenes.", error);
 		return null;
 	}),
-	loadDefinition(journey.state().scene),
+	loadDefinition(journey.state().scene).catch((error: unknown) => {
+		console.warn("Initial scene load failed.", error);
+		return null;
+	}),
 ]);
 let context: CanvasRenderingContext2D | null = null,
 	painting: Scene | undefined;
@@ -36,18 +40,46 @@ let lost = false,
 	time = 0,
 	selectionToken = 0,
 	resizeTimer: number | undefined;
+let dimensions = "";
+let touch = [0, 0, -100];
+let activeScene = journey.state().scene;
+let activeTarget = journey.state().to;
+let lastLoadedScene: SceneName | null = isSceneLoaded(activeScene)
+	? activeScene
+	: null;
+
+function clearTouch() {
+	touch = [0, 0, -100];
+}
+
+const sceneLoader = createSceneLoader({
+	load: loadDefinition,
+	isLoaded: isSceneLoaded,
+	onLoaded: (name) => {
+		lastLoadedScene = name;
+		draw();
+	},
+	onError: (name, error, attempt) => {
+		console.warn(`Scene "${name}" load failed (attempt ${attempt}).`, error);
+	},
+});
 
 function selectScene(name: SceneName, afterSelect?: () => void) {
 	const token = ++selectionToken;
 	if (isSceneLoaded(name)) {
+		if (name !== journey.state().to) clearTouch();
 		journey.select(name, !renderer);
 		draw();
 		afterSelect?.();
 		return;
 	}
+	sceneLoader.reset(name);
 	void loadDefinition(name)
 		.then(() => {
+			sceneLoader.reset(name);
+			lastLoadedScene = name;
 			if (token !== selectionToken) return;
+			if (name !== journey.state().to) clearTouch();
 			journey.select(name, !renderer);
 			draw();
 			afterSelect?.();
@@ -60,8 +92,6 @@ function selectScene(name: SceneName, afterSelect?: () => void) {
 const roomControls = createRoomControls((name) => {
 	selectScene(name);
 });
-let dimensions = "";
-let touch = [0, 0, -100];
 const wind = createWind();
 const preparation = createPreparation(async (name) => {
 	if (lost) return;
@@ -118,8 +148,21 @@ function fallback() {
 	fallbackCanvas.height = canvas.height;
 	context = fallbackCanvas.getContext("2d");
 	canvas.dataset.renderer = "canvas2d";
-	if (painting && isSceneLoaded(journey.state().scene))
-		drawStatic(journey.state().scene);
+	const current = journey.state();
+	const target = isSceneLoaded(current.scene)
+		? current.scene
+		: isSceneLoaded(current.from)
+			? current.from
+			: current.scene;
+	if (current.transitioning || target !== current.scene)
+		journey.select(target, true);
+	const settled = journey.state();
+	activeScene = settled.scene;
+	activeTarget = settled.to;
+	clearTouch();
+	updateSceneUI(canvas, settled, sceneButtons);
+	roomControls.update(settled);
+	if (painting && isSceneLoaded(settled.scene)) drawStatic(settled.scene);
 }
 
 function drawStatic(name: SceneName) {
@@ -127,21 +170,48 @@ function drawStatic(name: SceneName) {
 }
 function draw() {
 	if (lost || !painting) return;
-	const raw = journey.state();
-	if (!isSceneLoaded(raw.from)) {
-		void loadDefinition(raw.from).then(draw);
-		return;
+	let raw = journey.state();
+	if (raw.scene !== activeScene || raw.to !== activeTarget) {
+		clearTouch();
+		activeScene = raw.scene;
+		activeTarget = raw.to;
 	}
+	if (!isSceneLoaded(raw.from)) {
+		sceneLoader.request(raw.from);
+		if (
+			sceneLoader.hasFailed(raw.from) &&
+			lastLoadedScene &&
+			isSceneLoaded(lastLoadedScene)
+		) {
+			journey.select(lastLoadedScene, true);
+			raw = journey.state();
+			activeScene = raw.scene;
+			activeTarget = raw.to;
+			clearTouch();
+		} else {
+			return;
+		}
+	}
+	lastLoadedScene = raw.from;
 	let state = raw;
 	if (raw.transitioning && !isSceneLoaded(raw.to)) {
-		void loadDefinition(raw.to).then(draw);
-		state = {
-			...raw,
-			scene: raw.from,
-			to: raw.from,
-			blend: 0,
-			transitioning: false,
-		};
+		sceneLoader.request(raw.to);
+		if (sceneLoader.hasExhausted(raw.to)) {
+			journey.select(raw.from, true);
+			state = journey.state();
+			activeScene = state.scene;
+			activeTarget = state.to;
+		} else {
+			state = {
+				...raw,
+				scene: raw.from,
+				to: raw.from,
+				blend: 0,
+				transitioning: false,
+			};
+		}
+	} else if (isSceneLoaded(raw.scene)) {
+		lastLoadedScene = raw.scene;
 	}
 	try {
 		if (renderer) renderer.draw(time, touch, state, wind.value);
@@ -149,6 +219,7 @@ function draw() {
 	} catch (error) {
 		console.warn("Using static scene.", error);
 		fallback();
+		return;
 	}
 	updateSceneUI(canvas, state, sceneButtons);
 	roomControls.update(state);
@@ -214,15 +285,24 @@ window.addEventListener("pageshow", (event) => {
 	resize();
 	sync();
 });
+window.addEventListener("online", () => {
+	sceneLoader.reset();
+	if (!lost && !document.hidden) {
+		preparation.start(pendingScenes());
+		draw();
+	}
+});
 window.addEventListener("resize", () => {
 	clearTimeout(resizeTimer);
 	resizeTimer = setTimeout(resize, 120);
 });
 element("main").addEventListener("pointerdown", (event) => {
 	if (event.target !== canvas || !painting) return;
+	const rect = canvas.getBoundingClientRect();
+	if (!rect.width || !rect.height) return;
 	const state = journey.state();
-	const x = event.clientX / innerWidth,
-		y = event.clientY / innerHeight;
+	const x = (event.clientX - rect.left) / rect.width,
+		y = (event.clientY - rect.top) / rect.height;
 	if (
 		state.transitioning ||
 		!isSceneLoaded(state.scene) ||
@@ -240,14 +320,15 @@ canvas.addEventListener("webglcontextlost", (event) => {
 	animation.stop();
 	preparation.stop();
 });
-canvas.addEventListener("webglcontextrestored", () => {
+canvas.addEventListener("webglcontextrestored", (event) => {
+	if (event.target !== canvas || !renderer) return;
 	lost = false;
 	canvas.style.opacity = "1";
 	canvas.style.pointerEvents = "auto";
 	const fallbackCanvas = document.getElementById("fallback-canvas");
 	if (fallbackCanvas) fallbackCanvas.style.display = "none";
 	try {
-		renderer?.restore();
+		renderer.restore();
 		dimensions = "";
 		resize();
 		animation.sync();
