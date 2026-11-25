@@ -40,6 +40,9 @@ switching and the static Canvas 2D fallback across viewport resizes.
 - `tests/`: Node unit tests and Playwright browser E2E checks.
 - `docs/`: architecture, development guidance, and historical engineering records.
 - `licenses/`: upstream notices that need to accompany bundled dependencies.
+- `deploy/track/`: the visitor trail for this same site. Vite does not bundle it.
+  nginx injects `visit.js` and the snippets are installed on the host. The
+  static deploy does not copy this directory.
 
 Keep only the Vite entry template and tool configuration at the root alongside
 project metadata. There is no generated HTML copy or Pages-specific marker.
@@ -52,6 +55,15 @@ license notices, and historical engineering records.
 Builds include project, font, and bundled dependency notices. Runtime packages
 are bundled locally; browsers do not fetch JavaScript from third-party CDNs.
 Do not add private values to browser configuration or `VITE_*` variables.
+`deploy/track/` is installed separately from `dist/`. `visit.js` belongs at
+`/var/www/suizhou/track/visit.js`. The nginx snippets and
+`suizhou_headers.inc` belong in `/usr/local/etc/nginx/`. The host `nginx.conf`
+includes `suizhou_track_http.conf` at http level, `suizhou_track_locations.conf`
+inside the TLS server, and `suizhou_html_track.inc` from `location = /` and
+`location = /index.html`. `suizhou_headers.inc` allows `connect-src 'self'`.
+The full host `nginx.conf` stays on the server because it also configures
+other applications.
+
 An optional `ASSET_BASE_URL` selects the HTTPS asset CDN origin at build time.
 Its resulting public resource URLs are visible to website visitors; it is not a
 secret. Concrete deployment credentials stay in GitHub Actions secrets outside
